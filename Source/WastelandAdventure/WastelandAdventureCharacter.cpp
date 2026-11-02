@@ -1,6 +1,10 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "WastelandAdventureCharacter.h"
+#include "Components/WAHealthComponent.h"
+#include "Components/WAStaminaComponent.h"
+#include "Engine/World.h"
+#include "Templates/UnrealTemplate.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Animation/AnimInstance.h"
@@ -25,6 +29,9 @@
 
 AWastelandAdventureCharacter::AWastelandAdventureCharacter()
 {
+	HealthComponent = CreateDefaultSubobject<UWAHealthComponent>(TEXT("HealthComponent"));
+	StaminaComponent = CreateDefaultSubobject<UWAStaminaComponent>(TEXT("StaminaComponent"));
+	GetCharacterMovement()->AddTickPrerequisiteComponent(StaminaComponent);
 	DodgeKey = EKeys::LeftControl;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -72,11 +79,13 @@ AWastelandAdventureCharacter::AWastelandAdventureCharacter()
 void AWastelandAdventureCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	StaminaComponent->OnStaminaDepleted.AddUniqueDynamic(this, &AWastelandAdventureCharacter::OnStaminaDepleted);
 	UpdateMovementSpeed();
 }
 
 void AWastelandAdventureCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	StaminaComponent->OnStaminaDepleted.RemoveDynamic(this, &AWastelandAdventureCharacter::OnStaminaDepleted);
 	ClearDodgeState();
 	RemoveSprintMapping();
 	Super::EndPlay(EndPlayReason);
@@ -143,6 +152,12 @@ void AWastelandAdventureCharacter::StartSprint()
 {
 	if (GetController() && !GetController()->IsMoveInputIgnored())
 	{
+		bSprintHeld = true;
+		if (bSprintNeedsRelease || !StaminaComponent->StartSprinting())
+		{
+			bSprintNeedsRelease = true;
+			return;
+		}
 		bIsSprinting = true;
 		UpdateMovementSpeed();
 	}
@@ -150,6 +165,15 @@ void AWastelandAdventureCharacter::StartSprint()
 
 void AWastelandAdventureCharacter::StopSprint()
 {
+	bSprintHeld = bSprintNeedsRelease = false;
+	bIsSprinting = false;
+	StaminaComponent->StopSprinting();
+	UpdateMovementSpeed();
+}
+
+void AWastelandAdventureCharacter::OnStaminaDepleted(UWAStaminaComponent* Component)
+{
+	bSprintNeedsRelease = bSprintHeld;
 	bIsSprinting = false;
 	UpdateMovementSpeed();
 }
@@ -193,7 +217,7 @@ void AWastelandAdventureCharacter::OnDodgeInput()
 bool AWastelandAdventureCharacter::TryDodge()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	if (bIsDodging || bDodgeOnCooldown || !GetController() || GetController()->IsMoveInputIgnored()
+	if (bStartingDodge || bIsDodging || bDodgeOnCooldown || !GetController() || GetController()->IsMoveInputIgnored()
 		|| !Movement->IsActive() || !Movement->IsMovingOnGround() || bPressedJump
 		|| !FMath::IsFinite(DodgeDistance) || DodgeDistance <= 0.0f
 		|| !FMath::IsFinite(DodgeDuration) || DodgeDuration <= 0.0f
@@ -216,11 +240,24 @@ bool AWastelandAdventureCharacter::TryDodge()
 	}
 	Direction = Direction.GetSafeNormal2D();
 	if (Direction.IsNearlyZero()) { Direction = GetActorForwardVector().GetSafeNormal2D(); }
+	if (!StaminaComponent->CanAffordStamina(StaminaComponent->GetDodgeCost()) || !HasDodgeClearance(Direction)) { return false; }
 	return StartDodge(Direction);
+}
+
+bool AWastelandAdventureCharacter::HasDodgeClearance(const FVector& Direction) const
+{
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(WAStaminaDodgeStart), false, this);
+	const UCapsuleComponent* Capsule = GetCapsuleComponent();
+	const bool bHit = GetWorld()->SweepSingleByProfile(Hit, GetActorLocation(), GetActorLocation() + Direction * 2.0,
+		Capsule->GetComponentQuat(), Capsule->GetCollisionProfileName(), Capsule->GetCollisionShape(), Params);
+	// Preserve collision-shortened accepted dodges; reject only an immediately blocking non-walkable surface.
+	return !bHit || GetCharacterMovement()->IsWalkable(Hit);
 }
 
 bool AWastelandAdventureCharacter::StartDodge(const FVector& Direction)
 {
+	TGuardValue<bool> StartingGuard(bStartingDodge, true);
 	TSharedPtr<FRootMotionSource_ConstantForce> Source = MakeShared<FRootMotionSource_ConstantForce>();
 	Source->InstanceName = TEXT("WastelandDodge");
 	Source->AccumulateMode = ERootMotionAccumulateMode::Override;
@@ -233,8 +270,15 @@ bool AWastelandAdventureCharacter::StartDodge(const FVector& Direction)
 	Source->FinishVelocityParams.SetVelocity = FVector::ZeroVector;
 	DodgeRootMotionID = GetCharacterMovement()->ApplyRootMotionSource(Source);
 	if (DodgeRootMotionID == static_cast<uint16>(ERootMotionSourceID::Invalid)) { return false; }
+	if (!StaminaComponent->TryConsumeStamina(StaminaComponent->GetDodgeCost()))
+	{
+		GetCharacterMovement()->RemoveRootMotionSourceByID(DodgeRootMotionID);
+		DodgeRootMotionID = static_cast<uint16>(ERootMotionSourceID::Invalid);
+		return false;
+	}
 
 	bIsDodging = true;
+	StaminaComponent->SetDodging(true);
 	bDodgeOnCooldown = true;
 	// The forward dodge pose must face the accepted movement direction, including side/back input.
 	SetActorRotation(FRotator(0.0f, Direction.Rotation().Yaw, 0.0f));
@@ -252,6 +296,7 @@ void AWastelandAdventureCharacter::FinishDodge()
 	GetWorldTimerManager().ClearTimer(DodgeDurationTimer);
 	if (!bIsDodging) { return; }
 	bIsDodging = false;
+	StaminaComponent->SetDodging(false);
 	StopDodgeAnimation();
 	GetCharacterMovement()->RemoveRootMotionSourceByID(DodgeRootMotionID);
 	DodgeRootMotionID = static_cast<uint16>(ERootMotionSourceID::Invalid);

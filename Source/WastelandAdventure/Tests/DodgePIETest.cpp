@@ -1,6 +1,7 @@
 // Real PIE input/physics tests. Fixtures and per-instance parameter changes are never saved.
 #if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
 #include "WastelandAdventureCharacter.h"
+#include "Components/WAStaminaComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Editor.h"
@@ -134,6 +135,7 @@ private:
 		});
 		Add(TEXT("Directional dodge start"), 0.12, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina(); // Independent direction fixture; movement assertions are unchanged.
 			Origin = Pawn->GetActorLocation();
 			Key(DodgeKey, IE_Pressed);
 		});
@@ -177,6 +179,7 @@ private:
 		});
 		Add(TEXT("Input cancellation start"), 1.3, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina();
 			Test->TestTrue(TEXT("Jump lands normally"), Pawn->GetCharacterMovement()->IsMovingOnGround());
 			Key(DodgeKey, IE_Pressed);
 		});
@@ -196,6 +199,7 @@ private:
 		});
 		Add(TEXT("Wall collision start"), 0.7, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina();
 			Pawn->SetActorRotation(FRotator::ZeroRotator);
 			WallX = Pawn->GetActorLocation().X + 250.0;
 			Wall = Box(FVector(WallX, Pawn->GetActorLocation().Y, 150.0), FVector(25.0, 500.0, 400.0));
@@ -212,6 +216,7 @@ private:
 		});
 		Add(TEXT("Unpossess interruption and cooldown reset"), 0.7, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina();
 			Test->TestTrue(TEXT("Ready dodge accepted before unpossess"), Pawn->TryDodge());
 			PC->UnPossess();
 			Test->TestFalse(TEXT("Unpossess clears active dodge"), Pawn->IsDodging());
@@ -220,6 +225,7 @@ private:
 		});
 		Add(TEXT("Speed cap configuration"), 0.2, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina();
 			SetParameter(TEXT("DodgeSpeed"), 900.0f);
 			Pawn->SetActorRotation(FRotator::ZeroRotator);
 			Origin = Pawn->GetActorLocation();
@@ -233,6 +239,7 @@ private:
 		});
 		Add(TEXT("Distance and duration configuration"), 0.7, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina();
 			SetParameter(TEXT("DodgeSpeed"), 1800.0f);
 			SetParameter(TEXT("DodgeDistance"), 100.0f);
 			SetParameter(TEXT("DodgeDuration"), 0.5f);
@@ -261,6 +268,7 @@ private:
 		});
 		Add(TEXT("Platform edge start"), 0.3, [this]
 		{
+			Pawn->GetStaminaComponent()->ResetStamina();
 			Test->TestTrue(TEXT("Edge fixture is grounded before dodge"), Pawn->GetCharacterMovement()->IsMovingOnGround());
 			Origin = Pawn->GetActorLocation();
 			Key(DodgeKey, IE_Pressed);

@@ -1,6 +1,6 @@
 # 十阶段开发计划
 
-每阶段都按检查、最小实施、真实编译、运行、记录和验收执行。阶段 1 的最终状态见 Phase1Acceptance.md。阶段 2 已完成 2.1—2.5，并通过真实编译和完整 PIE 回归，范围、首轮失败及限制见 [Phase2_5Acceptance.md](Phase2_5Acceptance.md)。阶段 3—10 仍为计划，尚未开始。
+每阶段都按检查、最小实施、真实编译、运行、记录和验收执行。阶段 1 的最终状态见 Phase1Acceptance.md。阶段 2 与 3.1 的历史报告保持原样：[Phase2_5Acceptance.md](Phase2_5Acceptance.md)、[Phase3_1Health.md](Phase3_1Health.md)。任务 3.2 体力系统已完成真实编译、运行及 11 项回归，详见 [Phase3_2Stamina.md](Phase3_2Stamina.md)。第三阶段仅完成 3.1 / 3.2，3.3 攻击与其余后续阶段仍为计划，未自动开发。
 
 | 阶段 | 范围 | 必须满足的验收标准 |
 | --- | --- | --- |

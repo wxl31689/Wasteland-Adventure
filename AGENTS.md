@@ -31,5 +31,8 @@
 - Source、Content、Config、必要 Plugins 文件、文档、测试脚本及 `.uproject` 纳入版本控制。
 - 不提交 Binaries、Intermediate、Saved、DerivedDataCache、.vs、IDE 生成文件、凭据或本机日志。
 - `.uasset`、`.umap`、FBX、音频、贴图等二进制资源使用 Git LFS。检查实际索引指针与 LFS 对象，不能只检查 attributes 文本。
-- 禁止重写历史、自动推送；首次 commit 必须先列出拟提交范围并取得用户明确批准。
+- 用户于 2026-11-02 明确授权后续开发流程：每项任务完成并通过真实编译、实际运行验收后，提交并推送至 `https://github.com/wxl31689/Wasteland-Adventure.git`，将验收通过的成果合并到 `main`。常规提交、推送与合并无需重复申请许可；验收失败先修复并重测。
+- 若使用功能分支，合并前同步远程更新、保留已有历史；合并后对受影响内容执行必要回归，并核对远程提交与本机状态。无法从需求判断的业务冲突需向用户说明。
+- 每次提交前审核文件范围、LFS 指针与对象、凭据排除。当前 `Config/DefaultEngine.ini` 含仅本机使用的 AndroidFileServer `SecurityToken`；保留本机配置，提交版本必须排除令牌值，不能直接将其完整暂存上传。
+- 禁止重写历史或强制推送。每次完成后报告测试结果、提交链接、合并状态与遗留问题。
 - 覆盖用户文件、删除内容、安装变更或重大配置调整先告知并取得授权。常规需求范围内最小实现不应重复询问。

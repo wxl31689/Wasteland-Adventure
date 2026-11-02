@@ -16,6 +16,8 @@ class UInputMappingContext;
 class UAnimSequence;
 class UAnimMontage;
 class UEnhancedInputLocalPlayerSubsystem;
+class UWAHealthComponent;
+class UWAStaminaComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -36,6 +38,13 @@ class AWastelandAdventureCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
+
+	/** Independent health state; does not restrict the accepted locomotion or camera behavior. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UWAHealthComponent> HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UWAStaminaComponent> StaminaComponent;
 	
 protected:
 
@@ -138,6 +147,12 @@ private:
 	TWeakObjectPtr<UEnhancedInputLocalPlayerSubsystem> SprintInputSubsystem;
 
 	void RemoveSprintMapping();
+	UFUNCTION()
+	void OnStaminaDepleted(UWAStaminaComponent* Component);
+	bool HasDodgeClearance(const FVector& Direction) const;
+	bool bSprintHeld = false;
+	bool bSprintNeedsRelease = false;
+	bool bStartingDodge = false;
 	void OnDodgeInput();
 	bool StartDodge(const FVector& Direction);
 	void FinishDodge();
@@ -200,5 +215,14 @@ public:
 
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UFUNCTION(BlueprintPure, Category="Health")
+	UWAHealthComponent* GetHealthComponent() const { return HealthComponent; }
+
+	UFUNCTION(BlueprintPure, Category="Stamina")
+	UWAStaminaComponent* GetStaminaComponent() const { return StaminaComponent; }
+
+	UFUNCTION(BlueprintPure, Category="Stamina")
+	bool IsSprintReleaseRequired() const { return bSprintNeedsRelease; }
 };
 

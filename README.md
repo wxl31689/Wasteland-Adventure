@@ -1,6 +1,6 @@
 # Wasteland Adventure
 
-第三人称 3D 单机角色冒险 RPG 正式工程。官方第三人称模板基线已完成任务 2.1 奔跑、2.2 闪避、2.3 摄像机、2.4 角色动画状态及 2.5 综合验收。第二阶段按报告记录的范围与限制验收通过，第三阶段尚未开始。
+第三人称 3D 单机角色冒险 RPG 正式工程。已完成第二阶段角色控制及第三阶段 3.1 独立生命值组件、3.2 体力系统，按各报告范围与限制验收通过。普通攻击、战斗动画、AI 与其他后续系统尚未开发。
 
 ## 技术栈与环境
 
@@ -83,8 +83,20 @@ Set-Location 'F:\levn\game\Projects\WastelandAdventure'
 
 2026-11-02 的完整复测六项均 Success，编辑器与验证脚本退出码均为 0；综合测试实测约 30.0 / 59.8 FPS。这是两个帧率条件下的功能验收，未据此承诺发布版本性能。首轮 CameraPIE 曾有两条断言失败，同代码、同断言的前台复测通过，最初输入提前停止的原因尚未确证。原始失败与成功记录均保存在 `Saved/Verification/Phase2_5/`，详情见 [2.5 综合验收报告](Docs/Phase2_5Acceptance.md)。
 
+## 生命值组件（3.1）
+
+正式玩家通过原生默认子组件自动获得 `UWAHealthComponent`，默认 HP 100/100。InitializeHealth 幂等，ApplyDamage / RestoreHealth 对有效正数按实际 HP 范围处理，GetCurrentHealth / GetMaxHealth / GetHealthPercent / IsDead 只读查询。死亡后拒绝普通治疗与重复死亡通知；只有显式 ResetHealth 开始新生命并回满 HP。
+
+组件通过 BlueprintAssignable 的 OnHealthChanged / OnDeath 通知，不使用 Tick、复制或 GAS，不改变移动、相机和动画。组件的 ApplyDamage 是唯一实际扣血入口；引擎 Actor 的 AnyDamage 只转交一次。对同一命中使用一次引擎 Actor ApplyDamage 或一次组件调用，不能两条路径同时手动调用。通知期间同步重入的状态修改被拒绝。
+
+在 BP_ThirdPersonCharacter 中选择继承的 HealthComponent 配置 Max Health，不要重复添加；运行 PIE 后选择实际玩家组件查看只读 Current Health / Is Dead。完整 API、事件契约、Blueprint 步骤、失败记录与验收结果见 [3.1 生命值报告](Docs/Phase3_1Health.md)。关闭编辑器后运行 `Tests/RunHealthAcceptance.ps1`，执行两项生命值测试及原有六项图形 PIE 回归；可加 `-ManualStart`，在保持前台并停止 PIE 后从 UE 命令栏启动相同八项测试。
+
 ## 验收状态
 
-第一阶段已有真实完整 Editor 构建（400.34 秒）和显式增量构建（245.42 秒，退出码 0），历史分项限制保留在 `Docs/Phase1Acceptance.md`。任务 2.1—2.4 的记录见相应阶段报告；第二阶段最终综合验收见 `Docs/Phase2_5Acceptance.md`。本次实际编译了新增综合测试并完成六项真实 PIE 回归，第二阶段按已记录范围验收通过，第三阶段未开始。
+任务 3.2 的 `UWAStaminaComponent` 已接入原 Shift 奔跑和 Left Ctrl 闪避：默认 100 体力，奔跑 20/秒，成功闪避 25；停止消耗动作后等待 1 秒，再以 15/秒恢复。奔跑按原 Shift 持有状态计费，闪避期间暂停持续扣费与恢复。耗尽立即回到 500 速度上限，必须松开 Shift 后重新按下；失败闪避不扣费、不新增冷却。组件只在扣费/恢复时开启 Tick，等待使用定时器，满值关闭 Tick。
+
+在 BP_ThirdPersonCharacter 选择继承的 StaminaComponent 配置六项默认参数，不要重复添加。正式 HUD 尚未开发，可通过 BlueprintAssignable 事件接入后续 UI。关闭编辑器后运行 `Tests/RunStaminaAcceptance.ps1`（可加 `-ManualStart`），执行体力三项、生命值两项和角色控制六项测试。2026-11-03 完整 11 项全部 Success，实际编译链接退出码 0；API、边界、Blueprint 步骤与实测见 [3.2 体力报告](Docs/Phase3_2Stamina.md)。
+
+第一阶段已有真实完整 Editor 构建（400.34 秒）和显式增量构建（245.42 秒，退出码 0），历史分项限制保留在 `Docs/Phase1Acceptance.md`。第二阶段与 3.1 历史报告原样保留。3.1 曾实际编译链接（150.72 秒，退出码 0）并通过八项测试；3.2 再次通过生命值两项和角色控制六项回归。历史相机失败、启动条件错误、3.1 首轮动画失败均继续保留；本轮通过不能表述为已修复它们。3.1 当时按要求未提交，本次 3.2 验收后按既有授权整合通过验证的源码、测试及报告到仓库。
 
 项目仓库为 [wxl31689/Wasteland-Adventure](https://github.com/wxl31689/Wasteland-Adventure)。首次上传包括已完成的第一、二阶段及当前已保存的地图编辑；地图在 2.5 验收后有新增资源与 Actor 修改，上轮测试不覆盖这些后续地形编辑。快照范围、Git LFS 获取方式及本机凭据排除说明见 [仓库快照说明](Docs/RepositorySnapshot.md)。各阶段报告中的“未提交/未推送”描述保留为当时的历史状态。

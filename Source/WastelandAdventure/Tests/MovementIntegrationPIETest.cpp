@@ -2,6 +2,7 @@
 // Temporary fixtures and setup teleports are never saved and are not gameplay movement.
 #if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
 #include "WastelandAdventureCharacter.h"
+#include "Components/WAStaminaComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
@@ -74,6 +75,7 @@ private:
 	void ResetAt(const FVector& Surface, const FVector& Forward)
 	{
 		PC->FlushPressedKeys(); Movement()->StopMovementImmediately();
+		Pawn->GetStaminaComponent()->ResetStamina(); // Independent movement fixture starts with an affordable action budget.
 		PC->SetControlRotation(Forward.Rotation());
 		const FVector Position = Surface + FVector(0.0, 0.0, Pawn->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 15.0);
 		Test->TestTrue(TEXT("Collision-checked setup placement succeeds"), Pawn->TeleportTo(Position, Forward.Rotation()));

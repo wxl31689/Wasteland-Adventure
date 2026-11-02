@@ -1,0 +1,41 @@
+# UE generated build products and local caches
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+.vs/
+.vscode/
+.idea/
+**/Binaries/
+**/Intermediate/
+**/Saved/
+**/DerivedDataCache/
+
+# Generated IDE projects; .vsconfig is intentionally versioned
+*.sln
+*.slnx
+*.suo
+*.user
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.ipch
+
+# Local diagnostics, temporary files, and credentials
+*.log
+*.tmp
+*.bak
+.env
+.env.*
+!.env.example
+id_rsa
+id_ed25519
+*.pfx
+*.p12
+Thumbs.db
+Desktop.ini
+.DS_Store
